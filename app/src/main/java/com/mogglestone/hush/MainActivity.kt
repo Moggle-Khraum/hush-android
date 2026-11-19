@@ -30,7 +30,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Hub
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.WifiOff
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -49,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -127,7 +138,10 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun ModeTabs(selected: Int, onSelect: (Int) -> Unit) {
         Row(Modifier.fillMaxWidth()) {
-            listOf("NetBlock", "RedirectBlock").forEachIndexed { index, label ->
+            listOf(
+                "NetBlock" to Icons.Outlined.WifiOff,
+                "RedirectBlock" to Icons.Outlined.Link
+            ).forEachIndexed { index, (label, icon) ->
                 val on = index == selected
                 Column(
                     Modifier
@@ -136,12 +150,21 @@ class MainActivity : ComponentActivity() {
                         .padding(vertical = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        label,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (on) Ink else InkSoft
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            tint = if (on) Ink else InkSoft,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.size(6.dp))
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (on) Ink else InkSoft
+                        )
+                    }
                     Spacer(Modifier.height(8.dp))
                     Box(
                         Modifier
@@ -235,6 +258,7 @@ class MainActivity : ComponentActivity() {
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider(color = Hairline)
                 SettingRow(
+                    icon = Icons.Outlined.Hub,
                     title = "Include related apps",
                     caption = "Messenger, Facebook, Meta services",
                     checked = includeRelated,
@@ -246,6 +270,7 @@ class MainActivity : ComponentActivity() {
                 )
                 HorizontalDivider(color = Hairline)
                 SettingRow(
+                    icon = Icons.Outlined.Bolt,
                     title = "Kill background processes",
                     caption = "Ends them every 15 seconds",
                     checked = killProcesses,
@@ -309,12 +334,15 @@ class MainActivity : ComponentActivity() {
                 }
                 Spacer(Modifier.height(16.dp))
                 HorizontalDivider(color = Hairline)
-                Text(
-                    "Hush must be the default app for web links. Set it under Open by default in its settings.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = InkSoft,
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
+                Row(Modifier.padding(vertical = 12.dp), verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Outlined.Info, contentDescription = null, tint = InkSoft, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        "Hush must be the default app for web links. Set it under Open by default in its settings.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = InkSoft
+                    )
+                }
                 OutlinedButton(onClick = { openAppSettings() }) {
                     Text("Open Hush settings")
                 }
@@ -330,6 +358,7 @@ class MainActivity : ComponentActivity() {
             value = query,
             onValueChange = onQuery,
             label = { Text("Search apps") },
+            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
@@ -363,6 +392,8 @@ class MainActivity : ComponentActivity() {
                 if (checked && showForceStop) {
                     // Android only lets the user force-stop another app.
                     TextButton(onClick = { Killer.openForceStopPage(this@MainActivity, app.pkg) }) {
+                        Icon(Icons.Outlined.Stop, contentDescription = null, tint = Ink, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.size(4.dp))
                         Text("Force stop", color = Ink)
                     }
                 }
@@ -373,6 +404,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun SettingRow(
+        icon: ImageVector,
         title: String,
         caption: String,
         checked: Boolean,
@@ -384,6 +416,8 @@ class MainActivity : ComponentActivity() {
                 .padding(vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(icon, contentDescription = null, tint = Ink, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.size(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, color = Ink)
                 Text(caption, style = MaterialTheme.typography.bodySmall, color = InkSoft)
@@ -406,10 +440,11 @@ class MainActivity : ComponentActivity() {
             contentAlignment = Alignment.Center
         ) {
             Box(Modifier.size(92.dp).border(1.dp, ring.copy(alpha = 0.45f), CircleShape))
-            Text(
-                if (active) "Lift" else "Seal",
-                style = TextStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 22.sp),
-                color = if (enabled) ring else InkSoft
+            Icon(
+                if (active) Icons.Outlined.LockOpen else Icons.Outlined.Lock,
+                contentDescription = if (active) "Lift" else "Seal",
+                tint = if (enabled) ring else InkSoft,
+                modifier = Modifier.size(36.dp)
             )
         }
     }
