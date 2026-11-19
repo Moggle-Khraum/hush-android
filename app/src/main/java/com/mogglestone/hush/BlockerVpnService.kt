@@ -1,4 +1,4 @@
-package com.example.netblocker
+package com.mogglestone.hush
 
 import android.content.Context
 import android.content.Intent
@@ -6,6 +6,7 @@ import android.net.VpnService
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import java.io.FileInputStream
 
 /**
@@ -46,16 +47,16 @@ class BlockerVpnService : VpnService() {
     private fun startBlocking() {
         stopTunnel()
 
-        val selected = Prefs.blockedPackages(this)
+        val selected = Prefs.netblockPackages(this)
         if (selected.isEmpty()) {
-            Prefs.setActive(this, false)
+            Prefs.setNetblockActive(this, false)
             stopSelf()
             return
         }
         val packages = Related.expand(this, selected)
 
         val builder = Builder()
-            .setSession("NetBlocker")
+            .setSession("Hush")
             .addAddress("10.255.0.1", 32)
             .addAddress("fd00:255::1", 128)
             .addRoute("0.0.0.0", 0)
@@ -68,12 +69,13 @@ class BlockerVpnService : VpnService() {
             try {
                 builder.addAllowedApplication(pkg)
                 applied.add(pkg)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // App was uninstalled since it was selected; skip it.
+                Log.w(TAG, "Skipping $pkg: ${e.message}")
             }
         }
         if (applied.isEmpty()) {
-            Prefs.setActive(this, false)
+            Prefs.setNetblockActive(this, false)
             stopSelf()
             return
         }
@@ -81,27 +83,31 @@ class BlockerVpnService : VpnService() {
         val fd = builder.establish()
         if (fd == null) {
             // VPN permission was revoked.
-            Prefs.setActive(this, false)
+            Log.w(TAG, "VPN establish returned null; permission revoked?")
+            Prefs.setNetblockActive(this, false)
             stopSelf()
             return
         }
         tun = fd
         blocked = applied
-        Prefs.setActive(this, true)
+        Prefs.setNetblockActive(this, true)
 
         worker = Thread {
             val input = FileInputStream(fd.fileDescriptor)
             val buffer = ByteArray(32767)
             try {
                 // Read and drop every packet. No reply is ever written back.
+                // read() doesn't respond to interrupts; closing the fd in
+                // stopTunnel() is what unblocks it.
                 while (!Thread.currentThread().isInterrupted) {
                     if (input.read(buffer) < 0) break
                 }
-            } catch (_: Exception) {
-                // Interface closed; exit quietly.
+            } catch (e: Exception) {
+                // Expected when the interface is closed during stop.
+                Log.d(TAG, "Drain thread exited: ${e.message}")
             }
         }.also {
-            it.name = "netblocker-drain"
+            it.name = "hush-drain"
             it.start()
         }
 
@@ -115,14 +121,15 @@ class BlockerVpnService : VpnService() {
         worker = null
         try {
             tun?.close()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Error closing tunnel", e)
         }
         tun = null
     }
 
     private fun stopBlocking() {
         stopTunnel()
-        Prefs.setActive(this, false)
+        Prefs.setNetblockActive(this, false)
         stopSelf()
     }
 
@@ -134,12 +141,13 @@ class BlockerVpnService : VpnService() {
 
     override fun onDestroy() {
         stopTunnel()
-        Prefs.setActive(this, false)
+        Prefs.setNetblockActive(this, false)
         super.onDestroy()
     }
 
     companion object {
-        const val ACTION_STOP = "com.example.netblocker.STOP"
+        private const val TAG = "Hush"
+        const val ACTION_STOP = "com.mogglestone.hush.STOP"
         private const val KILL_INTERVAL_MS = 15_000L
 
         fun start(context: Context) {

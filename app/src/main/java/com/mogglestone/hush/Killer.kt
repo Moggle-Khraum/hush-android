@@ -1,10 +1,12 @@
-package com.example.netblocker
+package com.mogglestone.hush
 
 import android.app.ActivityManager
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.util.Log
 
 /**
  * Ends running processes of blocked apps so their open connections die too.
@@ -16,13 +18,15 @@ import android.provider.Settings
  * which openForceStopPage() opens.
  */
 object Killer {
+    private const val TAG = "Hush"
 
     fun killBackground(context: Context, packages: Collection<String>) {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         for (pkg in packages) {
             try {
                 am.killBackgroundProcesses(pkg)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not kill background processes of $pkg", e)
             }
         }
     }
@@ -31,6 +35,10 @@ object Killer {
         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
             .setData(Uri.fromParts("package", pkg, null))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+        try {
+            context.startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "No settings screen to force-stop $pkg", e)
+        }
     }
 }

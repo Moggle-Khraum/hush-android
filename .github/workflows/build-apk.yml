@@ -41,13 +41,13 @@ jobs:
       - name: Name the APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/NetBlocker-${GITHUB_REF_NAME//\//-}-${GITHUB_SHA::7}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/Hush-${GITHUB_REF_NAME//\//-}-${GITHUB_SHA::7}.apk"
           ls -l dist
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NetBlocker-apk
+          name: Hush-apk
           path: dist/*.apk
           if-no-files-found: error
 

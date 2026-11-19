@@ -1,0 +1,58 @@
+package com.mogglestone.hush
+
+import android.content.Context
+
+/** Settings for both modes. Each mode keeps its own app list and on/off state. */
+object Prefs {
+    private const val FILE = "hush"
+    private const val KEY_NET_PACKAGES = "netblock_packages"
+    private const val KEY_NET_ACTIVE = "netblock_active"
+    private const val KEY_REDIRECT_PACKAGES = "redirect_packages"
+    private const val KEY_REDIRECT_ACTIVE = "redirect_active"
+    private const val KEY_RELATED = "include_related"
+    private const val KEY_KILL = "kill_processes"
+
+    private fun sp(c: Context) = c.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+
+    // NetBlock
+    fun netblockPackages(c: Context): Set<String> =
+        sp(c).getStringSet(KEY_NET_PACKAGES, emptySet()) ?: emptySet()
+
+    fun setNetblockPackages(c: Context, packages: Set<String>) {
+        sp(c).edit().putStringSet(KEY_NET_PACKAGES, packages.toSet()).apply()
+    }
+
+    fun isNetblockActive(c: Context): Boolean = sp(c).getBoolean(KEY_NET_ACTIVE, false)
+
+    fun setNetblockActive(c: Context, active: Boolean) {
+        sp(c).edit().putBoolean(KEY_NET_ACTIVE, active).apply()
+    }
+
+    /** Also block apps from the same family as the selected ones. */
+    fun includeRelated(c: Context): Boolean = sp(c).getBoolean(KEY_RELATED, true)
+
+    fun setIncludeRelated(c: Context, value: Boolean) {
+        sp(c).edit().putBoolean(KEY_RELATED, value).apply()
+    }
+
+    /** Keep killing the blocked apps' background processes while blocking. */
+    fun killProcesses(c: Context): Boolean = sp(c).getBoolean(KEY_KILL, true)
+
+    fun setKillProcesses(c: Context, value: Boolean) {
+        sp(c).edit().putBoolean(KEY_KILL, value).apply()
+    }
+
+    // RedirectBlock
+    fun redirectPackages(c: Context): Set<String> =
+        sp(c).getStringSet(KEY_REDIRECT_PACKAGES, emptySet()) ?: emptySet()
+
+    fun setRedirectPackages(c: Context, packages: Set<String>) {
+        sp(c).edit().putStringSet(KEY_REDIRECT_PACKAGES, packages.toSet()).apply()
+    }
+
+    fun isRedirectActive(c: Context): Boolean = sp(c).getBoolean(KEY_REDIRECT_ACTIVE, false)
+
+    fun setRedirectActive(c: Context, active: Boolean) {
+        sp(c).edit().putBoolean(KEY_REDIRECT_ACTIVE, active).apply()
+    }
+}

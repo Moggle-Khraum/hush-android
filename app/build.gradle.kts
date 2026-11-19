@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.netblocker"
+    namespace = "com.mogglestone.hush"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.netblocker"
+        applicationId = "com.mogglestone.hush"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -40,4 +40,5 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 }

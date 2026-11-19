@@ -1,46 +1,30 @@
-# NetBlocker
+# Hush
 
-Per-app internet kill switch for Android (no root).
+An Android app that quiets the apps you choose. It has two independent modes:
 
-## How it works
-Selected apps are routed into a local VPN (`VpnService`) that reads and discards
-every packet, so those apps have no internet. Unselected apps are untouched.
-Nothing leaves your phone; the app has no INTERNET permission.
+- **NetBlock**: cuts selected apps off from the internet. It uses a local VPN
+  (`VpnService`) that reads and discards their packets. No root needed. Optional
+  options include blocking related apps (same family or shared UID) and ending
+  their background processes every 15 seconds.
+- **RedirectBlock**: drops web links opened by selected apps (ads, casino pages,
+  surprise browser tabs). Hush registers as the handler for http/https links.
+  Links from apps that set no referrer, and links opened inside an app's own
+  browser, are passed through or can't be caught.
 
-On top of that:
-- **Include related apps**: apps from the same family (same shared user ID, or
-  the same first two package segments, e.g. `com.facebook.orca` and
-  `com.facebook.katana`) are blocked too. Platform/vendor prefixes such as
-  `com.google` or `com.samsung` are never grouped, and Play Services and the
-  Play Store are never blocked. The extra packages are listed in the app.
-- **Kill background processes**: while blocking, the blocked apps' background
-  processes are ended every 15 seconds so old connections die and restarted
-  processes (push, sync) don't linger.
-- **Force stop** button next to each ticked app opens its system settings page.
+Each mode keeps its own app list and on/off state, and both can run at the same time.
 
-## Limits (Android, without root)
-- Only background processes can be killed. A foreground app, or a full
-  force-stop, needs you to tap "Force stop" on the settings page.
-- Other apps' files and data can't be deleted. Cached content still shows
-  offline; it just can't load anything new.
-- Push notifications still arrive via Google Play Services (not blocked).
-- Only one VPN can be active at a time, and blocking doesn't survive a reboot.
-- `QUERY_ALL_PACKAGES` is used to find related helper packages. That is fine for
-  sideloading but restricted on Google Play.
+## Limits
 
-## Use
-1. Tick the apps to cut off.
-2. Press "Block selected apps" and accept the VPN prompt.
-3. Press "Stop blocking" to restore internet.
+- Android only lets a normal app end background processes. Foreground apps need
+  you to tap "Force stop" on their settings page.
+- Blocking does not survive a reboot.
+- Only one VPN can run at a time, so NetBlock conflicts with other VPN apps.
+- `QUERY_ALL_PACKAGES` is restricted on Google Play. This build is for sideloading.
 
 ## Build
-Locally: open the folder in Android Studio (Ladybug or newer), or run
-`./gradlew assembleDebug`. The APK is at `app/build/outputs/apk/debug/`.
 
-CI: the **Build APK** workflow (`.github/workflows/build-apk.yml`) runs on every
-push to `main`, on pull requests, and manually from the Actions tab. Download the
-APK from the run's **Artifacts**. Pushing a tag like `v1.0` also publishes the
-APK as a GitHub Release.
+The GitHub Actions workflow `.github/workflows/build-apk.yml` builds a debug APK
+on every push to `main`, on pull requests, and on manual runs. Tags starting with
+`v` also publish a GitHub Release.
 
-The APK is signed with the debug key, so it installs directly on a phone
-(enable "Install unknown apps" for your browser or file manager).
+Local build: `./gradlew assembleDebug` (JDK 17, Android SDK 35).

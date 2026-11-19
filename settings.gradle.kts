@@ -11,5 +11,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "NetBlocker"
+rootProject.name = "Hush"
 include(":app")
