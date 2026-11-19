@@ -8,6 +8,16 @@ import android.net.VpnService
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -77,9 +87,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            HushTheme {
-                HushApp()
-            }
+            HushRoot()
         }
     }
 
@@ -100,7 +108,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun HushApp() {
+    private fun MainScreen(onOpenSettings: () -> Unit) {
         var apps by remember { mutableStateOf<List<AppEntry>>(emptyList()) }
         LaunchedEffect(Unit) {
             apps = withContext(Dispatchers.IO) { loadApps() }
@@ -110,23 +118,29 @@ class MainActivity : ComponentActivity() {
         Column(
             Modifier
                 .fillMaxSize()
-                .background(Ivory)
+                .background(ivory())
                 .padding(horizontal = 24.dp)
                 .padding(top = 24.dp, bottom = 8.dp)
         ) {
-            Text(
-                "Hush",
-                style = TextStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 40.sp),
-                color = Ink
-            )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Hush",
+                    style = TextStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 40.sp),
+                    color = ink(),
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onOpenSettings) {
+                    Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = ink())
+                }
+            }
             Text(
                 "Quiet the apps you choose.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = InkSoft
+                color = inkSoft()
             )
             Spacer(Modifier.height(16.dp))
             ModeTabs(selected = tab, onSelect = { tab = it })
-            HorizontalDivider(color = Hairline)
+            HorizontalDivider(color = hairline())
 
             if (tab == 0) {
                 NetBlockPanel(apps)
@@ -134,6 +148,204 @@ class MainActivity : ComponentActivity() {
                 RedirectPanel(apps)
             }
         }
+    }
+
+    @Composable
+    private fun HushRoot() {
+        var themeMode by remember { mutableStateOf(Prefs.themeMode(this@MainActivity)) }
+        val dark = when (themeMode) {
+            Prefs.THEME_DARK -> true
+            Prefs.THEME_LIGHT -> false
+            else -> isSystemInDarkTheme()
+        }
+        HushTheme(dark = dark) {
+            var showSettings by remember { mutableStateOf(false) }
+            BackHandler(enabled = showSettings) { showSettings = false }
+            if (showSettings) {
+                SettingsScreen(
+                    themeMode = themeMode,
+                    onThemeMode = {
+                        themeMode = it
+                        Prefs.setThemeMode(this@MainActivity, it)
+                    },
+                    onBack = { showSettings = false }
+                )
+            } else {
+                MainScreen(onOpenSettings = { showSettings = true })
+            }
+        }
+    }
+
+    @Composable
+    private fun SettingsScreen(themeMode: String, onThemeMode: (String) -> Unit, onBack: () -> Unit) {
+        var related by remember { mutableStateOf(Prefs.includeRelated(this@MainActivity)) }
+        var kill by remember { mutableStateOf(Prefs.killProcesses(this@MainActivity)) }
+        val linked = remember { isDefaultWebHandler() }
+        val version = remember {
+            try {
+                packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
+            } catch (e: PackageManager.NameNotFoundException) {
+                "?"
+            }
+        }
+
+        Column(
+            Modifier
+                .fillMaxSize()
+                .background(ivory())
+                .padding(horizontal = 24.dp)
+                .padding(top = 24.dp, bottom = 8.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = ink())
+                }
+                Text(
+                    "Settings",
+                    style = TextStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 32.sp),
+                    color = ink()
+                )
+            }
+
+            LazyColumn(
+                Modifier.weight(1f),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                item { SectionLabel("Appearance") }
+                item {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ThemeChip("System", themeMode == Prefs.THEME_SYSTEM) { onThemeMode(Prefs.THEME_SYSTEM) }
+                        ThemeChip("Light", themeMode == Prefs.THEME_LIGHT) { onThemeMode(Prefs.THEME_LIGHT) }
+                        ThemeChip("Dark", themeMode == Prefs.THEME_DARK) { onThemeMode(Prefs.THEME_DARK) }
+                    }
+                    Text(
+                        "System follows your phone's light or dark setting.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = inkSoft(),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    HorizontalDivider(color = hairline())
+                }
+
+                item { SectionLabel("Blocking") }
+                item {
+                    SettingRow(
+                        icon = Icons.Outlined.Hub,
+                        title = "Include related apps",
+                        caption = "Same family, e.g. Messenger and Facebook.",
+                        checked = related,
+                        onChecked = {
+                            related = it
+                            Prefs.setIncludeRelated(this@MainActivity, it)
+                        }
+                    )
+                    HorizontalDivider(color = hairline())
+                    SettingRow(
+                        icon = Icons.Outlined.Bolt,
+                        title = "Kill background processes",
+                        caption = "Ends running processes every 15 s.",
+                        checked = kill,
+                        onChecked = {
+                            kill = it
+                            Prefs.setKillProcesses(this@MainActivity, it)
+                        }
+                    )
+                    HorizontalDivider(color = hairline())
+                }
+
+                item { SectionLabel("Link handler") }
+                item {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Default for web links", style = MaterialTheme.typography.bodyLarge, color = ink())
+                            Text(
+                                if (linked) "Set. RedirectBlock can drop links." else "Needed for RedirectBlock. Not set yet.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = inkSoft()
+                            )
+                        }
+                        OutlinedButton(onClick = { openAppSettings() }) {
+                            Text(if (linked) "Change" else "Set up", color = ink())
+                        }
+                    }
+                    HorizontalDivider(color = hairline())
+                }
+
+                item { SectionLabel("About") }
+                item {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { openUrl("https://github.com/Moggle-Khraum/hush-android") }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("GitHub", style = MaterialTheme.typography.bodyLarge, color = ink())
+                            Text("Moggle-Khraum/hush-android", style = MaterialTheme.typography.bodySmall, color = inkSoft())
+                        }
+                        Icon(Icons.Outlined.OpenInNew, contentDescription = null, tint = inkSoft(), modifier = Modifier.size(18.dp))
+                    }
+                    HorizontalDivider(color = hairline())
+                    Row(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                        Text("Version", style = MaterialTheme.typography.bodyLarge, color = ink(), modifier = Modifier.weight(1f))
+                        Text(version, style = MaterialTheme.typography.bodyLarge, color = inkSoft())
+                    }
+                    HorizontalDivider(color = hairline())
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun SectionLabel(text: String) {
+        Text(
+            text.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = brass(),
+            modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+        )
+    }
+
+    @Composable
+    private fun RowScope.ThemeChip(label: String, selected: Boolean, onClick: () -> Unit) {
+        Box(
+            Modifier
+                .weight(1f)
+                .height(40.dp)
+                .clip(CircleShape)
+                .border(1.dp, if (selected) ink() else hairline(), CircleShape)
+                .background(if (selected) ink() else Color.Transparent)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selected) ivory() else ink()
+            )
+        }
+    }
+
+    /** True when Android would open web links with Hush. */
+    private fun isDefaultWebHandler(): Boolean {
+        val probe = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com"))
+        return packageManager.resolveActivity(probe, PackageManager.MATCH_DEFAULT_ONLY)
+            ?.activityInfo?.packageName == packageName
+    }
+
+    private fun openUrl(url: String) {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 
     @Composable
@@ -155,7 +367,7 @@ class MainActivity : ComponentActivity() {
                         Icon(
                             icon,
                             contentDescription = null,
-                            tint = if (on) Ink else InkSoft,
+                            tint = if (on) ink() else inkSoft(),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.size(6.dp))
@@ -163,7 +375,7 @@ class MainActivity : ComponentActivity() {
                             label,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (on) Ink else InkSoft
+                            color = if (on) ink() else inkSoft()
                         )
                     }
                     Spacer(Modifier.height(8.dp))
@@ -171,7 +383,7 @@ class MainActivity : ComponentActivity() {
                         Modifier
                             .fillMaxWidth()
                             .height(if (on) 2.dp else 1.dp)
-                            .background(if (on) Ink else Hairline)
+                            .background(if (on) ink() else hairline())
                     )
                 }
             }
@@ -253,11 +465,11 @@ class MainActivity : ComponentActivity() {
                             else -> "Press the seal to cut ${selected.size} app(s) off"
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = InkSoft
+                        color = inkSoft()
                     )
                 }
                 Spacer(Modifier.height(16.dp))
-                HorizontalDivider(color = Hairline)
+                HorizontalDivider(color = hairline())
                 SettingRow(
                     icon = Icons.Outlined.Hub,
                     title = "Include related apps",
@@ -269,7 +481,7 @@ class MainActivity : ComponentActivity() {
                         refreshIfActive()
                     }
                 )
-                HorizontalDivider(color = Hairline)
+                HorizontalDivider(color = hairline())
                 SettingRow(
                     icon = Icons.Outlined.Bolt,
                     title = "Kill background processes",
@@ -281,12 +493,12 @@ class MainActivity : ComponentActivity() {
                         refreshIfActive()
                     }
                 )
-                HorizontalDivider(color = Hairline)
+                HorizontalDivider(color = hairline())
                 if (related.isNotEmpty()) {
                     Text(
                         "Also covered: " + related.sorted().joinToString(", "),
                         style = MaterialTheme.typography.bodySmall,
-                        color = InkSoft,
+                        color = inkSoft(),
                         modifier = Modifier.padding(top = 10.dp)
                     )
                 }
@@ -330,18 +542,18 @@ class MainActivity : ComponentActivity() {
                             else -> "Press the seal to stop their links"
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = InkSoft
+                        color = inkSoft()
                     )
                 }
                 Spacer(Modifier.height(16.dp))
-                HorizontalDivider(color = Hairline)
+                HorizontalDivider(color = hairline())
                 Row(Modifier.padding(vertical = 12.dp), verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Outlined.Info, contentDescription = null, tint = InkSoft, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.Info, contentDescription = null, tint = inkSoft(), modifier = Modifier.size(18.dp))
                     Spacer(Modifier.size(8.dp))
                     Text(
                         "Hush must be the default app for web links. Set it under Open by default in its settings.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = InkSoft
+                        color = inkSoft()
                     )
                 }
                 OutlinedButton(onClick = { openAppSettings() }) {
@@ -387,19 +599,19 @@ class MainActivity : ComponentActivity() {
             ) {
                 Checkbox(checked = checked, onCheckedChange = null)
                 Column(Modifier.weight(1f).padding(start = 8.dp)) {
-                    Text(app.label, style = MaterialTheme.typography.bodyLarge, color = Ink)
-                    Text(app.pkg, style = MaterialTheme.typography.bodySmall, color = InkSoft)
+                    Text(app.label, style = MaterialTheme.typography.bodyLarge, color = ink())
+                    Text(app.pkg, style = MaterialTheme.typography.bodySmall, color = inkSoft())
                 }
                 if (checked && showForceStop) {
                     // Android only lets the user force-stop another app.
                     TextButton(onClick = { Killer.openForceStopPage(this@MainActivity, app.pkg) }) {
-                        Icon(Icons.Outlined.Close, contentDescription = null, tint = Ink, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Outlined.Close, contentDescription = null, tint = ink(), modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(4.dp))
-                        Text("Force stop", color = Ink)
+                        Text("Force stop", color = ink())
                     }
                 }
             }
-            HorizontalDivider(color = Hairline)
+            HorizontalDivider(color = hairline())
         }
     }
 
@@ -417,11 +629,11 @@ class MainActivity : ComponentActivity() {
                 .padding(vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = Ink, modifier = Modifier.size(22.dp))
+            Icon(icon, contentDescription = null, tint = ink(), modifier = Modifier.size(22.dp))
             Spacer(Modifier.size(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, color = Ink)
-                Text(caption, style = MaterialTheme.typography.bodySmall, color = InkSoft)
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = ink())
+                Text(caption, style = MaterialTheme.typography.bodySmall, color = inkSoft())
             }
             Switch(checked = checked, onCheckedChange = onChecked)
         }
@@ -430,13 +642,13 @@ class MainActivity : ComponentActivity() {
     /** The round seal that starts and stops a mode. */
     @Composable
     private fun Seal(active: Boolean, enabled: Boolean, onClick: () -> Unit) {
-        val ring = if (active) Alarm else Ink
+        val ring = if (active) alarm() else ink()
         Box(
             Modifier
                 .size(112.dp)
                 .clip(CircleShape)
                 .border(2.dp, ring, CircleShape)
-                .background(if (active) Alarm.copy(alpha = 0.06f) else Color.Transparent)
+                .background(if (active) alarm().copy(alpha = 0.06f) else Color.Transparent)
                 .clickable(enabled = enabled, onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
@@ -444,7 +656,7 @@ class MainActivity : ComponentActivity() {
             Icon(
                 if (active) Icons.Outlined.LockOpen else Icons.Outlined.Lock,
                 contentDescription = if (active) "Lift" else "Seal",
-                tint = if (enabled) ring else InkSoft,
+                tint = if (enabled) ring else inkSoft(),
                 modifier = Modifier.size(36.dp)
             )
         }

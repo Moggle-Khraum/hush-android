@@ -11,6 +11,11 @@ object Prefs {
     private const val KEY_REDIRECT_ACTIVE = "redirect_active"
     private const val KEY_RELATED = "include_related"
     private const val KEY_KILL = "kill_processes"
+    private const val KEY_THEME = "theme_mode"
+
+    const val THEME_SYSTEM = "system"
+    const val THEME_LIGHT = "light"
+    const val THEME_DARK = "dark"
 
     private fun sp(c: Context) = c.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -54,5 +59,12 @@ object Prefs {
 
     fun setRedirectActive(c: Context, active: Boolean) {
         sp(c).edit().putBoolean(KEY_REDIRECT_ACTIVE, active).apply()
+    }
+
+    /** Theme choice: THEME_SYSTEM, THEME_LIGHT or THEME_DARK. */
+    fun themeMode(c: Context): String = sp(c).getString(KEY_THEME, THEME_SYSTEM) ?: THEME_SYSTEM
+
+    fun setThemeMode(c: Context, mode: String) {
+        sp(c).edit().putString(KEY_THEME, mode).apply()
     }
 }
