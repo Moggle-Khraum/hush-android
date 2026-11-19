@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Checkbox
@@ -98,7 +100,7 @@ class MainActivity : ComponentActivity() {
                 .fillMaxSize()
                 .background(Ivory)
                 .padding(horizontal = 24.dp)
-                .padding(top = 48.dp, bottom = 16.dp)
+                .padding(top = 24.dp, bottom = 8.dp)
         ) {
             Text(
                 "Hush",
@@ -110,7 +112,7 @@ class MainActivity : ComponentActivity() {
                 style = MaterialTheme.typography.bodyMedium,
                 color = InkSoft
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
             ModeTabs(selected = tab, onSelect = { tab = it })
             HorizontalDivider(color = Hairline)
 
@@ -207,67 +209,65 @@ class MainActivity : ComponentActivity() {
             refreshIfActive()
         }
 
-        Spacer(Modifier.height(28.dp))
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Seal(
-                active = active,
-                enabled = active || selected.isNotEmpty(),
-                onClick = { if (active) stopBlocking() else startBlocking() }
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                when {
-                    active -> "Blocking ${selected.size + related.size} app(s)"
-                    selected.isEmpty() -> "Pick apps below to begin"
-                    else -> "Press the seal to cut ${selected.size} app(s) off"
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = InkSoft
-            )
-        }
-
-        Spacer(Modifier.height(20.dp))
-        HorizontalDivider(color = Hairline)
-        SettingRow(
-            title = "Include related apps",
-            caption = "Same-family packages, e.g. Messenger, Facebook and Meta services",
-            checked = includeRelated,
-            onChecked = {
-                includeRelated = it
-                Prefs.setIncludeRelated(this@MainActivity, it)
-                refreshIfActive()
+        LazyColumn(
+            Modifier.weight(1f),
+            contentPadding = PaddingValues(bottom = 24.dp)
+        ) {
+            item {
+                Spacer(Modifier.height(20.dp))
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Seal(
+                        active = active,
+                        enabled = active || selected.isNotEmpty(),
+                        onClick = { if (active) stopBlocking() else startBlocking() }
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        when {
+                            active -> "Blocking ${selected.size + related.size} app(s)"
+                            selected.isEmpty() -> "Pick apps below to begin"
+                            else -> "Press the seal to cut ${selected.size} app(s) off"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = InkSoft
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = Hairline)
+                SettingRow(
+                    title = "Include related apps",
+                    caption = "Messenger, Facebook, Meta services",
+                    checked = includeRelated,
+                    onChecked = {
+                        includeRelated = it
+                        Prefs.setIncludeRelated(this@MainActivity, it)
+                        refreshIfActive()
+                    }
+                )
+                HorizontalDivider(color = Hairline)
+                SettingRow(
+                    title = "Kill background processes",
+                    caption = "Ends them every 15 seconds",
+                    checked = killProcesses,
+                    onChecked = {
+                        killProcesses = it
+                        Prefs.setKillProcesses(this@MainActivity, it)
+                        refreshIfActive()
+                    }
+                )
+                HorizontalDivider(color = Hairline)
+                if (related.isNotEmpty()) {
+                    Text(
+                        "Also covered: " + related.sorted().joinToString(", "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = InkSoft,
+                        modifier = Modifier.padding(top = 10.dp)
+                    )
+                }
+                AppSearch(query) { query = it }
             }
-        )
-        HorizontalDivider(color = Hairline)
-        SettingRow(
-            title = "Kill background processes",
-            caption = "Ends running processes every 15 seconds so open connections drop",
-            checked = killProcesses,
-            onChecked = {
-                killProcesses = it
-                Prefs.setKillProcesses(this@MainActivity, it)
-                refreshIfActive()
-            }
-        )
-        HorizontalDivider(color = Hairline)
-
-        if (related.isNotEmpty()) {
-            Text(
-                "Also covered: " + related.sorted().joinToString(", "),
-                style = MaterialTheme.typography.bodySmall,
-                color = InkSoft,
-                modifier = Modifier.padding(top = 10.dp)
-            )
+            appItems(apps, selected, query, onToggle = { toggleApp(it) }, showForceStop = true)
         }
-
-        AppPicker(
-            apps = apps,
-            selected = selected,
-            query = query,
-            onQuery = { query = it },
-            onToggle = { toggleApp(it) },
-            showForceStop = true
-        )
     }
 
     @Composable
@@ -281,62 +281,51 @@ class MainActivity : ComponentActivity() {
             Prefs.setRedirectPackages(this@MainActivity, selected)
         }
 
-        Spacer(Modifier.height(28.dp))
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Seal(
-                active = active,
-                enabled = active || selected.isNotEmpty(),
-                onClick = {
-                    active = !active
-                    Prefs.setRedirectActive(this@MainActivity, active)
-                }
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                when {
-                    active -> "Stopping links from ${selected.size} app(s)"
-                    selected.isEmpty() -> "Pick apps below to begin"
-                    else -> "Press the seal to stop their links"
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = InkSoft
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "Links opened by these apps are dropped. Hush must be the default app for web links: " +
-                "open Hush's settings and set it under Open by default.",
-            style = MaterialTheme.typography.bodySmall,
-            color = InkSoft
-        )
-        OutlinedButton(
-            onClick = { openAppSettings() },
-            modifier = Modifier.padding(top = 8.dp)
+        LazyColumn(
+            Modifier.weight(1f),
+            contentPadding = PaddingValues(bottom = 24.dp)
         ) {
-            Text("Open Hush settings")
+            item {
+                Spacer(Modifier.height(20.dp))
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Seal(
+                        active = active,
+                        enabled = active || selected.isNotEmpty(),
+                        onClick = {
+                            active = !active
+                            Prefs.setRedirectActive(this@MainActivity, active)
+                        }
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        when {
+                            active -> "Stopping links from ${selected.size} app(s)"
+                            selected.isEmpty() -> "Pick apps below to begin"
+                            else -> "Press the seal to stop their links"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = InkSoft
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(color = Hairline)
+                Text(
+                    "Hush must be the default app for web links. Set it under Open by default in its settings.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = InkSoft,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+                OutlinedButton(onClick = { openAppSettings() }) {
+                    Text("Open Hush settings")
+                }
+                AppSearch(query) { query = it }
+            }
+            appItems(apps, selected, query, onToggle = { toggleApp(it) }, showForceStop = false)
         }
-
-        Spacer(Modifier.height(12.dp))
-        AppPicker(
-            apps = apps,
-            selected = selected,
-            query = query,
-            onQuery = { query = it },
-            onToggle = { toggleApp(it) },
-            showForceStop = false
-        )
     }
 
     @Composable
-    private fun ColumnScope.AppPicker(
-        apps: List<AppEntry>,
-        selected: Set<String>,
-        query: String,
-        onQuery: (String) -> Unit,
-        onToggle: (String) -> Unit,
-        showForceStop: Boolean
-    ) {
+    private fun AppSearch(query: String, onQuery: (String) -> Unit) {
         OutlinedTextField(
             value = query,
             onValueChange = onQuery,
@@ -344,33 +333,41 @@ class MainActivity : ComponentActivity() {
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp)
+                .padding(vertical = 12.dp)
         )
+    }
+
+    /** App rows as lazy items, so they scroll together with the header. */
+    private fun LazyListScope.appItems(
+        apps: List<AppEntry>,
+        selected: Set<String>,
+        query: String,
+        onToggle: (String) -> Unit,
+        showForceStop: Boolean
+    ) {
         val shown = apps.filter { it.label.contains(query, ignoreCase = true) }
-        LazyColumn(Modifier.weight(1f)) {
-            items(shown, key = { it.pkg }) { app ->
-                val checked = app.pkg in selected
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { onToggle(app.pkg) }
-                        .padding(vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(checked = checked, onCheckedChange = null)
-                    Column(Modifier.weight(1f).padding(start = 8.dp)) {
-                        Text(app.label, style = MaterialTheme.typography.bodyLarge, color = Ink)
-                        Text(app.pkg, style = MaterialTheme.typography.bodySmall, color = InkSoft)
-                    }
-                    if (checked && showForceStop) {
-                        // Android only lets the user force-stop another app.
-                        TextButton(onClick = { Killer.openForceStopPage(this@MainActivity, app.pkg) }) {
-                            Text("Force stop", color = Ink)
-                        }
+        items(shown, key = { it.pkg }) { app ->
+            val checked = app.pkg in selected
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggle(app.pkg) }
+                    .padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(checked = checked, onCheckedChange = null)
+                Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                    Text(app.label, style = MaterialTheme.typography.bodyLarge, color = Ink)
+                    Text(app.pkg, style = MaterialTheme.typography.bodySmall, color = InkSoft)
+                }
+                if (checked && showForceStop) {
+                    // Android only lets the user force-stop another app.
+                    TextButton(onClick = { Killer.openForceStopPage(this@MainActivity, app.pkg) }) {
+                        Text("Force stop", color = Ink)
                     }
                 }
-                HorizontalDivider(color = Hairline)
             }
+            HorizontalDivider(color = Hairline)
         }
     }
 
@@ -401,17 +398,17 @@ class MainActivity : ComponentActivity() {
         val ring = if (active) Alarm else Ink
         Box(
             Modifier
-                .size(148.dp)
+                .size(112.dp)
                 .clip(CircleShape)
                 .border(2.dp, ring, CircleShape)
                 .background(if (active) Alarm.copy(alpha = 0.06f) else Color.Transparent)
                 .clickable(enabled = enabled, onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
-            Box(Modifier.size(124.dp).border(1.dp, ring.copy(alpha = 0.45f), CircleShape))
+            Box(Modifier.size(92.dp).border(1.dp, ring.copy(alpha = 0.45f), CircleShape))
             Text(
                 if (active) "Lift" else "Seal",
-                style = TextStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 28.sp),
+                style = TextStyle(fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 22.sp),
                 color = if (enabled) ring else InkSoft
             )
         }
