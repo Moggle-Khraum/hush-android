@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.WifiOff
 import androidx.compose.material3.Checkbox
@@ -392,7 +393,7 @@ class MainActivity : ComponentActivity() {
                 if (checked && showForceStop) {
                     // Android only lets the user force-stop another app.
                     TextButton(onClick = { Killer.openForceStopPage(this@MainActivity, app.pkg) }) {
-                        Icon(Icons.Outlined.Stop, contentDescription = null, tint = Ink, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Outlined.Close, contentDescription = null, tint = Ink, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(4.dp))
                         Text("Force stop", color = Ink)
                     }
