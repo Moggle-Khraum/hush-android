@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.provides
 import androidx.compose.ui.graphics.Color
 
 /** Classical palette: ivory and ink in light mode, midnight ink with brass in dark mode. */
