@@ -12,6 +12,9 @@ object Prefs {
     private const val KEY_RELATED = "include_related"
     private const val KEY_KILL = "kill_processes"
     private const val KEY_THEME = "theme_mode"
+    private const val KEY_REDIRECT_SITES = "redirect_sites"
+    private const val KEY_REDIRECT_UNKNOWN = "redirect_unknown"
+    const val DEFAULT_SITES = "shopee,lazada"
 
     const val THEME_SYSTEM = "system"
     const val THEME_LIGHT = "light"
@@ -66,5 +69,24 @@ object Prefs {
 
     fun setThemeMode(c: Context, mode: String) {
         sp(c).edit().putString(KEY_THEME, mode).apply()
+    }
+
+    /** Raw text the user typed, e.g. "shopee, lazada". */
+    fun redirectSitesRaw(c: Context): String =
+        sp(c).getString(KEY_REDIRECT_SITES, DEFAULT_SITES) ?: DEFAULT_SITES
+
+    fun setRedirectSitesRaw(c: Context, text: String) {
+        sp(c).edit().putString(KEY_REDIRECT_SITES, text).apply()
+    }
+
+    /** Words to match against each domain label, lowercased. */
+    fun redirectSites(c: Context): Set<String> =
+        redirectSitesRaw(c).split(",").map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet()
+
+    /** Also drop links whose sender Android doesn't report. */
+    fun redirectUnknown(c: Context): Boolean = sp(c).getBoolean(KEY_REDIRECT_UNKNOWN, false)
+
+    fun setRedirectUnknown(c: Context, value: Boolean) {
+        sp(c).edit().putBoolean(KEY_REDIRECT_UNKNOWN, value).apply()
     }
 }

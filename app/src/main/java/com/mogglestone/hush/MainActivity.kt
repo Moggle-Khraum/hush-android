@@ -279,6 +279,42 @@ class MainActivity : ComponentActivity() {
                     HorizontalDivider(color = hairline())
                 }
 
+                item { SectionLabel("Redirect rules") }
+                item {
+                    var sites by remember { mutableStateOf(Prefs.redirectSitesRaw(this@MainActivity)) }
+                    OutlinedTextField(
+                        value = sites,
+                        onValueChange = {
+                            sites = it
+                            Prefs.setRedirectSitesRaw(this@MainActivity, it)
+                        },
+                        label = { Text("Block links to sites") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    )
+                    Text(
+                        "Comma-separated words, e.g. shopee, lazada. Matches any country domain such as shopee.co.id.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = inkSoft(),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    HorizontalDivider(color = hairline())
+                    var unknown by remember { mutableStateOf(Prefs.redirectUnknown(this@MainActivity)) }
+                    SettingRow(
+                        icon = Icons.Outlined.Link,
+                        title = "Block links from unknown apps",
+                        caption = "Drops links that don't say which app sent them.",
+                        checked = unknown,
+                        onChecked = {
+                            unknown = it
+                            Prefs.setRedirectUnknown(this@MainActivity, it)
+                        }
+                    )
+                    HorizontalDivider(color = hairline())
+                }
+
                 item { SectionLabel("About") }
                 item {
                     Row(

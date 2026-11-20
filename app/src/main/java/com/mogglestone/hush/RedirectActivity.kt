@@ -28,13 +28,23 @@ class RedirectActivity : ComponentActivity() {
             return
         }
 
-        val sender = senderPackage()
-        val blocked = Prefs.redirectPackages(this)
-        if (Prefs.isRedirectActive(this) && sender != null && sender in blocked) {
-            Log.i(TAG, "Blocked link from $sender: $link")
-            Toast.makeText(this, "Hush stopped a link from $sender", Toast.LENGTH_SHORT).show()
-            finish()
-            return
+        if (Prefs.isRedirectActive(this)) {
+            val sender = senderPackage()
+            val blockedApp = sender != null && sender in Prefs.redirectPackages(this)
+            val site = matchedSite(link)
+            val unknownSender = sender == null && Prefs.redirectUnknown(this)
+            val reason = when {
+                blockedApp -> "from $sender"
+                site != null -> "to $site"
+                unknownSender -> "from an unknown app"
+                else -> null
+            }
+            if (reason != null) {
+                Log.i(TAG, "Dropped link $reason: $link")
+                Toast.makeText(this, "Hush stopped a link $reason", Toast.LENGTH_SHORT).show()
+                finish()
+                return
+            }
         }
 
         openInBrowser(link)
@@ -48,6 +58,12 @@ class RedirectActivity : ComponentActivity() {
         val extra = intent.getStringExtra(Intent.EXTRA_REFERRER_NAME) ?: return null
         val uri = Uri.parse(extra)
         return if (uri.scheme == "android-app") uri.host else null
+    }
+
+    /** First configured site word that appears as a label of the link's host. */
+    private fun matchedSite(link: Uri): String? {
+        val labels = link.host?.lowercase()?.split('.') ?: return null
+        return Prefs.redirectSites(this).firstOrNull { it in labels }
     }
 
     /** First installed browser that isn't Hush, so the link never loops back here. */
