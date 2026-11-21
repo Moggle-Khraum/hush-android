@@ -17,11 +17,27 @@ object Prefs {
     private const val KEY_REDIRECT_ON = "redirect_on"
     private const val KEY_BLOCKLIST = "blocklist"
 
+    private const val DEFAULT_BLOCKLIST = "ggslot.fund"
+
     private fun sp(c: Context) = c.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+
+    /**
+     * Canonicalize a domain for storage and matching.
+     * Accepts pasted URLs and mixed case; returns a bare hostname.
+     */
+    fun normalizeDomain(raw: String): String {
+        var s = raw.trim().lowercase()
+        s = s.removePrefix("https://").removePrefix("http://")
+        s = s.substringBefore('/').substringBefore('?').substringBefore('#')
+        s = s.substringBefore(':')
+        s = s.removePrefix("www.")
+        while (s.endsWith('.')) s = s.dropLast(1)
+        return s
+    }
 
     // ---- NetBlock ----
     fun blockedPackages(c: Context): Set<String> =
-        sp(c).getStringSet(KEY_PACKAGES, emptySet()) ?: emptySet()
+        (sp(c).getStringSet(KEY_PACKAGES, emptySet()) ?: emptySet()).toSet()
 
     fun setBlockedPackages(c: Context, packages: Set<String>) {
         sp(c).edit().putStringSet(KEY_PACKAGES, packages.toSet()).apply()
@@ -33,14 +49,12 @@ object Prefs {
         sp(c).edit().putBoolean(KEY_ACTIVE, active).apply()
     }
 
-    /** Also block apps from the same family as the selected ones. */
     fun includeRelated(c: Context): Boolean = sp(c).getBoolean(KEY_RELATED, true)
 
     fun setIncludeRelated(c: Context, value: Boolean) {
         sp(c).edit().putBoolean(KEY_RELATED, value).apply()
     }
 
-    /** Keep killing the blocked apps' background processes while blocking. */
     fun killProcesses(c: Context): Boolean = sp(c).getBoolean(KEY_KILL, true)
 
     fun setKillProcesses(c: Context, value: Boolean) {
@@ -49,7 +63,7 @@ object Prefs {
 
     // ---- RedirectBlock ----
     fun redirectPackages(c: Context): Set<String> =
-        sp(c).getStringSet(KEY_REDIRECT_PACKAGES, emptySet()) ?: emptySet()
+        (sp(c).getStringSet(KEY_REDIRECT_PACKAGES, emptySet()) ?: emptySet()).toSet()
 
     fun setRedirectPackages(c: Context, packages: Set<String>) {
         sp(c).edit().putStringSet(KEY_REDIRECT_PACKAGES, packages.toSet()).apply()
@@ -61,11 +75,22 @@ object Prefs {
         sp(c).edit().putBoolean(KEY_REDIRECT_ON, value).apply()
     }
 
-    /** Domains whose links are dropped (subdomains included). */
     fun blocklist(c: Context): Set<String> =
-        sp(c).getStringSet(KEY_BLOCKLIST, setOf("ggslot.fund")) ?: emptySet()
+        (sp(c).getStringSet(KEY_BLOCKLIST, setOf(DEFAULT_BLOCKLIST)) ?: emptySet())
+            .map { normalizeDomain(it) }
+            .filter { it.isNotEmpty() }
+            .toSet()
 
     fun setBlocklist(c: Context, domains: Set<String>) {
-        sp(c).edit().putStringSet(KEY_BLOCKLIST, domains.toSet()).apply()
+        val clean = domains.map { normalizeDomain(it) }.filter { it.isNotEmpty() }.toSet()
+        sp(c).edit().putStringSet(KEY_BLOCKLIST, clean).apply()
+    }
+
+    /** Persist the seed once, so "reset to defaults" later is predictable. */
+    fun ensureSeeded(c: Context) {
+        val sp = sp(c)
+        if (!sp.contains(KEY_BLOCKLIST)) {
+            sp.edit().putStringSet(KEY_BLOCKLIST, setOf(DEFAULT_BLOCKLIST)).apply()
+        }
     }
 }
