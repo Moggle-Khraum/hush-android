@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -138,7 +139,7 @@ private fun HushApp(apps: List<AppEntry>) {
         )
     }
     MaterialTheme(colorScheme = scheme) {
-        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
+        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize().systemBarsPadding()) {
             HushScreens(apps)
         }
     }
