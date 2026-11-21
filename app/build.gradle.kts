@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.netblocker"
+    namespace = "com.mogglestone.hush"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.netblocker"
+        applicationId = "com.mogglestone.hush"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

@@ -1,4 +1,4 @@
-package com.example.netblocker
+package com.mogglestone.hush
 
 import android.content.Context
 import android.content.Intent
@@ -139,7 +139,7 @@ class BlockerVpnService : VpnService() {
     }
 
     companion object {
-        const val ACTION_STOP = "com.example.netblocker.STOP"
+        const val ACTION_STOP = "com.mogglestone.hush.STOP"
         private const val KILL_INTERVAL_MS = 15_000L
 
         fun start(context: Context) {

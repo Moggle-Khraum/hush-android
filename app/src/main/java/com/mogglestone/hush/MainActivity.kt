@@ -1,4 +1,4 @@
-package com.example.netblocker
+package com.mogglestone.hush
 
 import android.app.Activity
 import android.content.Intent
