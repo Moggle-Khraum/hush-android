@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -640,7 +639,7 @@ private fun Seal(
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(Modifier.matchParentSize()) {
+        Canvas(Modifier.fillMaxSize()) {
             val c = Offset(this.size.width / 2, this.size.height / 2)
             val r = this.size.minDimension / 2
             drawCircle(ring, radius = r - 1.dp.toPx(), center = c, style = Stroke(1.dp.toPx()))
